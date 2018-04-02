@@ -1,6 +1,10 @@
 
-function [response mu EMplot]= EMG(flag,img,k)
+%function [response mu EMplot]= EMG(flag,img,k)
 close all;
+rng(1331);
+img = 'stadium.bmp';
+k = 4;
+flag =0;
 
 %[img cmap] = imread('stadium.bmp');
 [img cmap] = imread(img);
@@ -32,15 +36,11 @@ for i = 1 : k
     sigma(:, :, i) = cov(class) - Modify;
 end
 
-%for t = 1 : k        
-%    for i = 1 : n * m
-%        N(t) = N(t) + pi(t) * mvnpdf(strip(i,:), mu(:,:,t), sigma(:,:,t));
-%    end
-%end
-%pi = N/sum(N);
-
+saved_log_likelihood = 0;
+log_likelihood = 0;
+like = [];
 response = zeros(n*m,k);
-iter = 10;
+iter = 100;
 Eplot = [];
 Mplot = [];
 EMplot = [];
@@ -58,22 +58,32 @@ while iter > 0
         t =sum(response(i,:));
         response(i,:) = response(i,:)/t;
     end
-    
-    N = sum(response);
-    pi = N/sum(N);
+
+    %N = sum(response);
+    %pi = N/sum(N);
     %calc
     logE = 0;
     for i = 1 : n*m
-        tmp = 0;
         for t = 1 : k
-            tmp = tmp + pi(t)*mvnpdf(strip(i,:),mu(t,:),sigma(:,:,t));
+            logE = logE + response(i,t)*log(N(t))+response(i,t)*log(mvnpdf(strip(i,:),mu(t,:),sigma(:,:,t)));
         end
-        logE = logE + log(tmp);
     end
     Eplot = [Eplot logE];
     EMplot = [EMplot logE];
+    
+    log_likelihood = 0;
+    for i= 1: n*m
+        sums = 0;
+        for t=1:k
+            sums = sums+response(i,t)*pi(t)*mvnpdf(strip(i,:),mu(t,:) ,sigma(:,:,t));
+        end
+        log_likelihood = log_likelihood+log(sums);
+    end
+    saved_log_likelihood = log_likelihood;
+    like = [like log_likelihood];
+    
     %M-step
-    %N = sum(response);
+    N = sum(response);
     mu = zeros(k,3);
     sigma = zeros(3,3,k);
     for t = 1 : k
@@ -87,21 +97,33 @@ while iter > 0
         sigma(:,:,t) = sigma(:,:,t)/N(t);
         sigma(:,:,t) = sigma(:,:,t) - Modify;
     end
-    %pi = N/sum(N);
+    pi = N/sum(N);
     %calc
     logM = 0;
     for i = 1 : n*m
-        tmp = 0;
         for t = 1 : k
-            tmp = tmp + pi(t)*mvnpdf(strip(i,:),mu(t,:),sigma(:,:,t));
+            logM = logM + response(i,t)*log(N(t))+response(i,t)*log(mvnpdf(strip(i,:),mu(t,:),sigma(:,:,t)));
         end
-        logM = logM + log(tmp);
     end
+    
+    log_likelihood = 0;
+    for i= 1: n*m
+        sums = 0;
+        for t=1:k
+            sums = sums+response(i,t)*pi(t)*mvnpdf(strip(i,:),mu(t,:) ,sigma(:,:,t));
+        end
+        log_likelihood = log_likelihood+log(sums);
+    end
+    like = [like log_likelihood];
+
+    
     Mplot = [Mplot logM];
     EMplot = [EMplot logM];
-    if logM <= 1.00001*logE
-        break
-    end
+    %if logM <= 1.00001*logE
+    %if logM - logE == 0
+    %    break
+    %end
+
     iter = iter - 1;
 end
 [dummy,idx] = max(response,[],2);
@@ -122,4 +144,6 @@ plot(1:length(EMplot),EMplot);
 xlabel('StepE-StepM Alternate Step num');
 ylabel('expected complete log-likelihood');
 title(['k = ' num2str(k)]);
-end
+%end
+figure(3)
+plot(1:length(like),like);
