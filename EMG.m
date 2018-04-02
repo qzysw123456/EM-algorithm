@@ -75,7 +75,7 @@ while iter > 0
     for i= 1: n*m
         sums = 0;
         for t=1:k
-            sums = sums+response(i,t)*pi(t)*mvnpdf(strip(i,:),mu(t,:) ,sigma(:,:,t));
+            sums = sums+pi(t)*mvnpdf(strip(i,:),mu(t,:) ,sigma(:,:,t));
         end
         log_likelihood = log_likelihood+log(sums);
     end
@@ -110,7 +110,7 @@ while iter > 0
     for i= 1: n*m
         sums = 0;
         for t=1:k
-            sums = sums+response(i,t)*pi(t)*mvnpdf(strip(i,:),mu(t,:) ,sigma(:,:,t));
+            sums = sums+pi(t)*mvnpdf(strip(i,:),mu(t,:) ,sigma(:,:,t));
         end
         log_likelihood = log_likelihood+log(sums);
     end
@@ -119,10 +119,10 @@ while iter > 0
     
     Mplot = [Mplot logM];
     EMplot = [EMplot logM];
-    %if logM <= 1.00001*logE
-    %if logM - logE == 0
-    %    break
-    %end
+  
+    if log_likelihood < 1.00001 * saved_log_likelihood
+        break
+    end
 
     iter = iter - 1;
 end
